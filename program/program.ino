@@ -13,6 +13,7 @@
 #include <SPI.h>
 #include <ricmoo_qrcode.h>
 #include <WiFiClientSecure.h>
+#include <esp_task_wdt.h>
 
 // =============================================================================
 // KONFIGURASI
@@ -30,15 +31,15 @@ const int           HTTP_TIMEOUT_MS  = 5000;
 
 // Flow sensor
 #define PIN_FLOW_SENSOR 17
-const float TARGET_LITERS = 0.2;
+const float TARGET_LITERS = 1;
 const unsigned long PULSES_PER_LITER = 450;
 const unsigned long TARGET_PULSES = (unsigned long)(TARGET_LITERS * PULSES_PER_LITER);
 const unsigned long MAX_FILL_TIMEOUT_MS = 30000; // safety timeout 30 detik
 
 // Hardware
 #define PIN_IR_SENSOR  18
-#define PIN_BUTTON     19
-#define PIN_RELAY      20
+#define PIN_BUTTON     4
+#define PIN_RELAY      5
 
 #define TFT_W 320
 #define TFT_H 240
@@ -157,6 +158,10 @@ void setup() {
 
   currentState = STATE_WIFI_CONNECTING;
   drawWiFiConnectingScreen();
+
+  // Register loop task ke Watchdog Timer
+  esp_task_wdt_add(NULL);
+
   connectWiFi();
 }
 
@@ -166,6 +171,9 @@ void setup() {
 
 void loop() {
   unsigned long now = millis();
+
+  // Feed watchdog setiap loop iteration
+  esp_task_wdt_reset();
 
   if (WiFi.status() != WL_CONNECTED) {
     if (wifiWasConnected) {
@@ -253,31 +261,40 @@ void loop() {
       }
 
       if (btnNow == LOW && irNow == LOW) {
-        Serial.println("[BTN] Tombol ditekan, IR valid -> Mulai isi!");
-        digitalWrite(PIN_RELAY, HIGH);
+        delay(50); // debounce
+        if (digitalRead(PIN_BUTTON) == LOW) { // validasi tekan nyata
+          Serial.println("[BTN] Tombol ditekan, IR valid -> Mengirim status PROCESSING...");
 
-        if (isPaused && remainingTimeMs > 0) {
-          fillingStart = millis() - (MAX_FILL_TIMEOUT_MS - remainingTimeMs);
-          Serial.printf("[RESUME] Melanjutkan sisa timeout %lums\n", remainingTimeMs);
-          isPaused = false;
-          remainingTimeMs = 0;
-        } else {
-          fillingStart = millis();
-        }
-
-        resetFlowCounter();
-
-        if (filledGallons == 0) {
-          Serial.println("[API] Mengirim PROCESSING...");
-          if (updateDeviceStatus("PROCESSING")) {
-            Serial.println("[API] PROCESSING terkirim");
-          } else {
-            Serial.println("[WARN] Gagal kirim PROCESSING");
+          // Kirim HTTP PATCH PROCESSING terlebih dahulu
+          if (filledGallons == 0) {
+            drawCenteredText("Memproses...", 178, 1, CLR_WHITE, CLR_LIGHT_GREEN);
+            if (updateDeviceStatus("PROCESSING")) {
+              Serial.println("[API] PROCESSING terkirim");
+            } else {
+              Serial.println("[WARN] Gagal kirim PROCESSING");
+            }
           }
-        }
 
-        currentState   = STATE_PROCESSING;
-        lastDrawnState = (AppState)(-1);
+          delay(500); // beri jeda agar voltage stabil / HTTP selesai total
+          esp_task_wdt_reset(); // Reset WDT sebelum menyalakan pompa
+
+          Serial.println("[POMPA] Menyalakan relay...");
+          digitalWrite(PIN_RELAY, HIGH);
+
+          if (isPaused && remainingTimeMs > 0) {
+            fillingStart = millis() - (MAX_FILL_TIMEOUT_MS - remainingTimeMs);
+            Serial.printf("[RESUME] Melanjutkan sisa timeout %lums\n", remainingTimeMs);
+            isPaused = false;
+            remainingTimeMs = 0;
+          } else {
+            fillingStart = millis();
+          }
+
+          resetFlowCounter();
+
+          currentState   = STATE_PROCESSING;
+          lastDrawnState = (AppState)(-1);
+        }
       }
       break;
     }
@@ -287,11 +304,15 @@ void loop() {
 
       if (digitalRead(PIN_IR_SENSOR) == HIGH) {
         digitalWrite(PIN_RELAY, LOW);
+        delay(500); // beri jeda agar back-EMF pompa reda
+        esp_task_wdt_reset();
         remainingTimeMs = (elapsed < MAX_FILL_TIMEOUT_MS) ? (MAX_FILL_TIMEOUT_MS - elapsed) : 0;
         isPaused = true;
         Serial.printf("[SAFETY] Galon diangkat! Sisa timeout: %lums\n", remainingTimeMs);
         drawGalonLiftedScreen();
+        esp_task_wdt_reset();
         delay(2000);
+        esp_task_wdt_reset();
         currentState   = STATE_CONFIRM_FILL;
         lastDrawnState = (AppState)(-1);
         break;
@@ -302,6 +323,8 @@ void loop() {
         lastDrawnState = STATE_PROCESSING;
         lastPulseCheckTime = millis();
         lastPulseCount = flowPulseCount;
+
+        // PROCESSING request sudah dipindah ke STATE_CONFIRM_FILL sebelum relay nyala
       } else {
         unsigned long pulseCount = flowPulseCount;
         unsigned long pulses = pulseCount;
@@ -322,15 +345,35 @@ void loop() {
 
       if (flowPulseCount >= TARGET_PULSES) {
         digitalWrite(PIN_RELAY, LOW);
+        delay(500); // beri jeda agar back-EMF pompa reda sebelum lanjut
+        esp_task_wdt_reset();
         filledGallons++;
-        Serial.printf("[DONE] Target 1 liter tercapai. Pulses=%lu\n", flowPulseCount);
+        unsigned long elapsedMs = millis() - fillingStart;
+        float liters = (float)flowPulseCount / (float)PULSES_PER_LITER;
+        float flowRate = (float)flowPulseCount / (float)PULSES_PER_LITER / (elapsedMs / 60000.0);
+        Serial.println("=== KALIBRASI: Target Tercapai ===");
+        Serial.printf("Total Pulsa : %lu\n", flowPulseCount);
+        Serial.printf("Volume      : %.3f L\n", liters);
+        Serial.printf("Elapsed     : %lums (%.1f dtk)\n", elapsedMs, elapsedMs / 1000.0);
+        Serial.printf("Flow Rate   : %.2f L/min\n", flowRate);
+        Serial.printf("Pulsa/Liter : %.0f\n", (float)flowPulseCount / liters);
+        Serial.printf("Pulsa/Liter (ekstrapolasi ke 1L): %.1f\n", PULSES_PER_LITER * (1.0 / TARGET_LITERS));
+        Serial.println("================================");
         currentState   = STATE_CHECK_NEXT;
         lastDrawnState = (AppState)(-1);
       }
 
       if (elapsed >= MAX_FILL_TIMEOUT_MS) {
         digitalWrite(PIN_RELAY, LOW);
-        Serial.println("[WARN] Timeout tercapai sebelum 1 liter");
+        delay(500); // beri jeda agar back-EMF pompa reda
+        esp_task_wdt_reset();
+        float liters = (float)flowPulseCount / (float)PULSES_PER_LITER;
+        Serial.println("=== KALIBRASI: Timeout! ===");
+        Serial.printf("Total Pulsa : %lu\n", flowPulseCount);
+        Serial.printf("Volume      : %.3f L (belum tercapai)\n", liters);
+        Serial.printf("Elapsed     : %lums\n", elapsed);
+        Serial.printf("Target      : %lu pulsa (%.3f L)\n", TARGET_PULSES, TARGET_LITERS);
+        Serial.println("===========================");
         currentState   = STATE_ERROR;
         lastDrawnState = (AppState)(-1);
       }
@@ -349,12 +392,15 @@ void loop() {
       if (filledGallons < totalGallons) {
         if (digitalRead(PIN_IR_SENSOR) == HIGH) {
           Serial.println("[IR] Galon penuh diangkat -> Menyiapkan galon berikutnya");
+          esp_task_wdt_reset();
           delay(1000);
+          esp_task_wdt_reset();
           currentState   = STATE_PREPARE_FILL;
           lastDrawnState = (AppState)(-1);
         }
       } else {
         Serial.println("[API] Semua galon selesai, kirim DONE...");
+        esp_task_wdt_reset(); // Reset WDT sebelum HTTP request
         if (updateDeviceStatus("DONE")) {
           Serial.println("[API] DONE terkirim");
         } else {
@@ -373,7 +419,12 @@ void loop() {
         Serial.println("[STATE] DONE");
       }
 
-      delay(5000);
+      // delay non-blocking dengan WDT feed — 5 detik
+      for (int i = 0; i < 10; i++) {
+        esp_task_wdt_reset();
+        delay(500);
+      }
+      esp_task_wdt_reset();
 
       totalGallons    = 0;
       filledGallons   = 0;
@@ -456,6 +507,7 @@ void connectWiFi() {
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 40) {
     delay(500);
+    esp_task_wdt_reset();
     Serial.print(".");
     attempts++;
     tft.fillRect(80, 195, 160, 16, CLR_DARK_GRAY);
@@ -464,6 +516,7 @@ void connectWiFi() {
     }
   }
   Serial.println();
+  esp_task_wdt_reset();
 
   if (WiFi.status() == WL_CONNECTED) {
     wifiWasConnected = true;
@@ -475,10 +528,12 @@ void connectWiFi() {
     snprintf(ipStr, sizeof(ipStr), "IP: %s", WiFi.localIP().toString().c_str());
     drawCenteredText(ipStr, 130, 1, CLR_WHITE, CLR_DARK_GRAY);
     delay(1500);
+    esp_task_wdt_reset();
   } else {
     Serial.println("[WiFi] Gagal.");
     drawCenteredText("Gagal! Coba lagi...", 130, 1, CLR_RED, CLR_DARK_GRAY);
     delay(3000);
+    esp_task_wdt_reset();
   }
 }
 
@@ -487,6 +542,7 @@ void connectWiFi() {
 // =============================================================================
 
 String getDeviceStatus() {
+  esp_task_wdt_reset();
   WiFiClientSecure client;
   client.setInsecure();
 
@@ -500,6 +556,7 @@ String getDeviceStatus() {
   http.addHeader("x-device-token", DEVICE_TOKEN);
 
   int code = http.GET();
+  esp_task_wdt_reset();
   String result = "";
 
   if (code == HTTP_CODE_OK) {
@@ -531,6 +588,7 @@ String getDeviceStatus() {
 // =============================================================================
 
 bool updateDeviceStatus(const char* status) {
+  esp_task_wdt_reset();
   WiFiClientSecure client;
   client.setInsecure();
 
@@ -552,6 +610,7 @@ bool updateDeviceStatus(const char* status) {
 
   Serial.print("[HTTP PATCH] "); Serial.println(body);
   int code = http.PATCH(body);
+  esp_task_wdt_reset();
   bool ok = (code == HTTP_CODE_OK || code == HTTP_CODE_CREATED);
   if (!ok) {
     Serial.print("[HTTP PATCH] Error: ");

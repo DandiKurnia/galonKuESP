@@ -21,7 +21,8 @@ Berikut adalah analisis seluruh kode program dari file `program.ino` tanpa singk
 #include &lt;TFT_eSPI.h&gt;
 #include &lt;SPI.h&gt;
 #include &lt;ricmoo_qrcode.h&gt;
-#include &lt;WiFiClientSecure.h&gt;</code></pre>
+#include &lt;WiFiClientSecure.h&gt;
+<span style="background-color: #d4edda;">#include &lt;esp_task_wdt.h&gt;</span></code></pre>
 </td>
 <td>
 <strong>Library / Pustaka Pendukung:</strong>
@@ -33,6 +34,7 @@ Berikut adalah analisis seluruh kode program dari file `program.ino` tanpa singk
   <li><code>SPI.h</code>: Protokol komunikasi bus SPI untuk layar LCD.</li>
   <li><code>ricmoo_qrcode.h</code>: Membuat data visual QR Code langsung pada ESP32.</li>
   <li><code>WiFiClientSecure.h</code>: Mengamankan koneksi HTTPS via TLS/SSL.</li>
+  <li style="background-color: #d4edda;"><code>esp_task_wdt.h</code>: Mengakses API Watchdog Timer (WDT) ESP-IDF untuk mencegah crash akibat task hang.</li>
 </ul>
 </td>
 </tr>
@@ -63,8 +65,8 @@ const int           HTTP_TIMEOUT_MS  = 5000;</code></pre>
 <td>
 <pre><code>// Flow sensor
 #define PIN_FLOW_SENSOR 17
-const float TARGET_LITERS = 1.0;
-const unsigned long PULSES_PER_LITER = 450;
+<span style="background-color: #d4edda;">const float TARGET_LITERS = 1;</span>
+<span style="background-color: #d4edda;">const unsigned long PULSES_PER_LITER = 450;</span>
 const unsigned long TARGET_PULSES = (unsigned long)(TARGET_LITERS * PULSES_PER_LITER);
 const unsigned long MAX_FILL_TIMEOUT_MS = 30000; // safety timeout 30 detik</code></pre>
 </td>
@@ -72,8 +74,8 @@ const unsigned long MAX_FILL_TIMEOUT_MS = 30000; // safety timeout 30 detik</cod
 <strong>Konfigurasi Takaran Air (Flow Sensor YF-S201):</strong>
 <ul>
   <li><code>PIN_FLOW_SENSOR</code>: Sensor dipasang pada GPIO 17.</li>
-  <li><code>TARGET_LITERS</code>: Jumlah target air per pengisian yaitu 1.0 Liter.</li>
-  <li><code>PULSES_PER_LITER</code>: Kalibrasi sensor flow, di mana 450 pulsa setara dengan 1 liter air.</li>
+  <li style="background-color: #d4edda;"><code>TARGET_LITERS</code>: Jumlah target air per pengisian (1 Liter).</li>
+  <li style="background-color: #d4edda;"><code>PULSES_PER_LITER</code>: Kalibrasi sensor flow sesuai datasheet YF-S201, di mana 450 pulsa setara dengan 1 liter air.</li>
   <li><code>TARGET_PULSES</code>: Hasil perkalian target volume dengan konstanta pulsa (450 pulsa).</li>
   <li><code>MAX_FILL_TIMEOUT_MS</code>: Fitur keselamatan (safety timeout). Jika dalam 30 detik pengisian belum mencapai target, pompa otomatis mati guna mencegah luapan/kebocoran.</li>
 </ul>
@@ -84,8 +86,8 @@ const unsigned long MAX_FILL_TIMEOUT_MS = 30000; // safety timeout 30 detik</cod
 <td>
 <pre><code>// Hardware
 #define PIN_IR_SENSOR  18
-#define PIN_BUTTON     19
-#define PIN_RELAY      20
+<span style="background-color: #d4edda;">#define PIN_BUTTON     4</span>
+<span style="background-color: #d4edda;">#define PIN_RELAY      5</span>
 #define TFT_W 320
 #define TFT_H 240</code></pre>
 </td>
@@ -93,8 +95,8 @@ const unsigned long MAX_FILL_TIMEOUT_MS = 30000; // safety timeout 30 detik</cod
 <strong>Definisi Pin Perangkat Keras &amp; Dimensi LCD:</strong>
 <ul>
   <li><code>PIN_IR_SENSOR</code>: GPIO 18 untuk sensor IR obstacle (mendeteksi keberadaan galon).</li>
-  <li><code>PIN_BUTTON</code>: GPIO 19 untuk tombol fisik konfirmasi pengisian.</li>
-  <li><code>PIN_RELAY</code>: GPIO 20 untuk mengontrol saklar elektronik pompa air.</li>
+  <li style="background-color: #d4edda;"><code>PIN_BUTTON</code>: GPIO 4 untuk tombol fisik konfirmasi pengisian.</li>
+  <li style="background-color: #d4edda;"><code>PIN_RELAY</code>: GPIO 5 untuk mengontrol saklar elektronik pompa air.</li>
   <li><code>TFT_W</code> &amp; <code>TFT_H</code>: Dimensi lebar (320 piksel) dan tinggi (240 piksel) dari layar LCD.</li>
 </ul>
 </td>
@@ -244,7 +246,7 @@ void resetFlowCounter();</code></pre>
 <strong>Inisialisasi Hardware &amp; Debugging (setup bagian 1):</strong>
 <ul>
   <li><code>Serial.begin(115200)</code>: Membuka komunikasi serial debugging.</li>
-  <li><code>pinMode</code>: Mengatur GPIO 18 (Sensor IR) sebagai input digital biasa, GPIO 19 (Tombol) sebagai input pull-up internal (active LOW), dan GPIO 20 (Relay Pompa) sebagai output digital.</li>
+  <li><code>pinMode</code>: Mengatur GPIO 18 (Sensor IR) sebagai input digital biasa, <span style="background-color: #d4edda;">GPIO 4 (Tombol)</span> sebagai input pull-up internal (active LOW), dan <span style="background-color: #d4edda;">GPIO 5 (Relay Pompa)</span> sebagai output digital.</li>
   <li><code>digitalWrite(PIN_RELAY, LOW)</code>: Mematikan relay pompa air saat awal menyala untuk alasan keamanan.</li>
   <li><code>attachInterrupt</code>: Mengaktifkan interrupt hardware pada GPIO 17 (Flow Sensor) yang memicu fungsi <code>flowPulseISR</code> ketika sinyal transisi jatuh (FALLING/HIGH ke LOW).</li>
 </ul>
@@ -253,10 +255,10 @@ void resetFlowCounter();</code></pre>
 <!-- ROW 10: SETUP - TFT LCD & WIFI CONNECT -->
 <tr>
 <td>
-<pre><code>  Serial.println("[HW] IR Sensor  : GPIO 18");
-  Serial.println("[HW] Button     : GPIO 19 (PULLUP)");
-  Serial.println("[HW] Relay/Pompa: GPIO 20");
-  Serial.println("[HW] Flow Sensor: GPIO 17");
+<pre><code>  <span style="background-color: #d4edda;">Serial.println("[HW] IR Sensor  : GPIO 18");</span>
+  <span style="background-color: #d4edda;">Serial.println("[HW] Button     : GPIO 19 (PULLUP)");</span>
+  <span style="background-color: #d4edda;">Serial.println("[HW] Relay/Pompa: GPIO 20");</span>
+  <span style="background-color: #d4edda;">Serial.println("[HW] Flow Sensor: GPIO 17");</span>
   tft.init();
   tft.setRotation(1);
   tft.fillScreen(CLR_BLACK);
@@ -264,6 +266,8 @@ void resetFlowCounter();</code></pre>
   snprintf(qrContent, sizeof(qrContent), "%s", DEVICE_CODE);
   currentState = STATE_WIFI_CONNECTING;
   drawWiFiConnectingScreen();
+  <span style="background-color: #d4edda;">// Register loop task ke Watchdog Timer</span>
+  <span style="background-color: #d4edda;">esp_task_wdt_add(NULL);</span>
   connectWiFi();
 }</code></pre>
 </td>
@@ -275,6 +279,7 @@ void resetFlowCounter();</code></pre>
   <li><code>tft.setRotation(1)</code>: Mengatur orientasi layar horizontal (320x240 piksel).</li>
   <li><code>tft.fillScreen(CLR_BLACK)</code>: Membersihkan layar TFT dengan warna hitam.</li>
   <li><code>snprintf</code>: Memasukkan string <code>DEVICE_CODE</code> ke array buffer <code>qrContent</code>.</li>
+  <li style="background-color: #d4edda;">Mendaftarkan thread Arduino loop ke hardware Watchdog Timer (WDT) via <code>esp_task_wdt_add(NULL)</code> sebelum memulai koneksi WiFi agar task WiFi reconnect tidak memicu watchdog reset.</li>
   <li>Mengarahkan status awal ke <code>STATE_WIFI_CONNECTING</code>, menggambar layar loading koneksi WiFi, lalu mengeksekusi fungsi <code>connectWiFi()</code>.</li>
 </ul>
 </td>
@@ -284,6 +289,8 @@ void resetFlowCounter();</code></pre>
 <td>
 <pre><code>void loop() {
   unsigned long now = millis();
+  <span style="background-color: #d4edda;">// Feed watchdog setiap loop iteration</span>
+  <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
   if (WiFi.status() != WL_CONNECTED) {
     if (wifiWasConnected) {
       Serial.println("[WiFi] Terputus! Reconnecting...");
@@ -305,6 +312,7 @@ void resetFlowCounter();</code></pre>
 <strong>Siklus Utama &amp; Pengawas WiFi (loop bagian 1):</strong>
 <ul>
   <li>Membaca nilai milidetik aktif ESP32 via <code>millis()</code>.</li>
+  <li style="background-color: #d4edda;"><code>esp_task_wdt_reset()</code>: Secara eksplisit memberikan sinyal <em>feed</em> pada watchdog timer pada setiap siklus utama, memastikan CPU tidak menganggap thread mengalami hang (timeout trigger/Guru Meditation Error).</li>
   <li>Melakukan pengecekan status jaringan nirkabel. Jika WiFi terputus saat sistem sedang berjalan, program langsung mematikan pompa air (LOW) untuk keselamatan, mengubah layar ke loading koneksi, lalu memanggil fungsi re-koneksi <code>connectWiFi()</code>.</li>
   <li>Jika terhubung, flag <code>wifiWasConnected</code> diatur bernilai true dan program masuk ke switch-case evaluasi status (FSM).</li>
 </ul>
@@ -389,8 +397,10 @@ void resetFlowCounter();</code></pre>
         lastDrawnState = STATE_CONFIRM_FILL;
         Serial.println("[STATE] CONFIRM_FILL - Menunggu tombol...");
       }
+
       bool irNow  = digitalRead(PIN_IR_SENSOR);
       bool btnNow = digitalRead(PIN_BUTTON);
+
       if (irNow == HIGH) {
         Serial.println("[IR] Galon diangkat sebelum konfirmasi -> PREPARE_FILL");
         isPaused = false;
@@ -399,28 +409,42 @@ void resetFlowCounter();</code></pre>
         lastDrawnState = (AppState)(-1);
         break;
       }
+
       if (btnNow == LOW && irNow == LOW) {
-        Serial.println("[BTN] Tombol ditekan, IR valid -> Mulai isi!");
-        digitalWrite(PIN_RELAY, HIGH);
-        if (isPaused && remainingTimeMs > 0) {
-          fillingStart = millis() - (MAX_FILL_TIMEOUT_MS - remainingTimeMs);
-          Serial.printf("[RESUME] Melanjutkan sisa timeout %lums\n", remainingTimeMs);
-          isPaused = false;
-          remainingTimeMs = 0;
-        } else {
-          fillingStart = millis();
-        }
-        resetFlowCounter();
-        if (filledGallons == 0) {
-          Serial.println("[API] Mengirim PROCESSING...");
-          if (updateDeviceStatus("PROCESSING")) {
-            Serial.println("[API] PROCESSING terkirim");
-          } else {
-            Serial.println("[WARN] Gagal kirim PROCESSING");
+        <span style="background-color: #d4edda;">delay(50); // debounce</span>
+        <span style="background-color: #d4edda;">if (digitalRead(PIN_BUTTON) == LOW) { // validasi tekan nyata</span>
+          Serial.println("[BTN] Tombol ditekan, IR valid -> <span style="background-color: #d4edda;">Mengirim status PROCESSING...</span>");
+
+          <span style="background-color: #d4edda;">// Kirim HTTP PATCH PROCESSING terlebih dahulu</span>
+          if (filledGallons == 0) {
+            <span style="background-color: #d4edda;">drawCenteredText("Memproses...", 178, 1, CLR_WHITE, CLR_LIGHT_GREEN);</span>
+            if (updateDeviceStatus("PROCESSING")) {
+              Serial.println("[API] PROCESSING terkirim");
+            } else {
+              Serial.println("[WARN] Gagal kirim PROCESSING");
+            }
           }
+
+          <span style="background-color: #d4edda;">delay(500); // beri jeda agar voltage stabil / HTTP selesai total</span>
+          <span style="background-color: #d4edda;">esp_task_wdt_reset(); // Reset WDT sebelum menyalakan pompa</span>
+
+          Serial.println("[POMPA] Menyalakan relay...");
+          <span style="background-color: #d4edda;">digitalWrite(PIN_RELAY, HIGH);</span>
+
+          if (isPaused && remainingTimeMs > 0) {
+            fillingStart = millis() - (MAX_FILL_TIMEOUT_MS - remainingTimeMs);
+            Serial.printf("[RESUME] Melanjutkan sisa timeout %lums\n", remainingTimeMs);
+            isPaused = false;
+            remainingTimeMs = 0;
+          } else {
+            fillingStart = millis();
+          }
+
+          resetFlowCounter();
+
+          currentState   = STATE_PROCESSING;
+          lastDrawnState = (AppState)(-1);
         }
-        currentState   = STATE_PROCESSING;
-        lastDrawnState = (AppState)(-1);
       }
       break;
     }</code></pre>
@@ -432,10 +456,11 @@ void resetFlowCounter();</code></pre>
   <li>Jika galon diangkat kembali sebelum tombol ditekan (sensor IR membaca HIGH), alur dibatalkan dan dikembalikan ke <code>STATE_PREPARE_FILL</code>.</li>
   <li>Jika tombol ditekan (<code>btnNow == LOW</code>) dan sensor IR valid (ada galon):
     <ul>
-      <li>Relay pompa air dinyalakan (HIGH).</li>
+      <li style="background-color: #d4edda;"><strong>Debounce:</strong> Ditambahkan <code>delay(50)</code> dan validasi ulang <code>digitalRead(PIN_BUTTON) == LOW</code> untuk memastikan penekanan tombol valid dan menghindari noise sinyal.</li>
+      <li style="background-color: #d4edda;"><strong>Urutan aman (fix crash):</strong> HTTP PATCH "PROCESSING" dikirim <em>terlebih dahulu sebelum</em> relay pompa dinyalakan. Urutan lama (relay ON → HTTP) menyebabkan voltage drop yang memicu crash Guru Meditation Error.</li>
+      <li style="background-color: #d4edda;"><code>delay(500)</code> dan <code>esp_task_wdt_reset()</code> memberikan jeda agar tegangan stabil dan HTTP response tuntas sebelum pompa dinyalakan.</li>
       <li>Jika status dalam mode jeda (isPaused), sisa waktu safety timeout dikalkulasi ulang untuk dilanjutkan (resume). Jika pengisian baru, waktu pengisian (<code>fillingStart</code>) di-reset ke millis saat ini.</li>
       <li>Cacah sensor flow dibersihkan ke nol (<code>resetFlowCounter()</code>).</li>
-      <li>Jika ini adalah pengisian galon pertama, program mengirim request update status "PROCESSING" ke cloud API server.</li>
       <li>Mengalihkan status FSM ke <code>STATE_PROCESSING</code>.</li>
     </ul>
   </li>
@@ -447,28 +472,38 @@ void resetFlowCounter();</code></pre>
 <td>
 <pre><code>    case STATE_PROCESSING: {
       unsigned long elapsed = now - fillingStart;
+
       if (digitalRead(PIN_IR_SENSOR) == HIGH) {
         digitalWrite(PIN_RELAY, LOW);
+        <span style="background-color: #d4edda;">delay(500); // beri jeda agar back-EMF pompa reda</span>
+        <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
         remainingTimeMs = (elapsed < MAX_FILL_TIMEOUT_MS) ? (MAX_FILL_TIMEOUT_MS - elapsed) : 0;
         isPaused = true;
         Serial.printf("[SAFETY] Galon diangkat! Sisa timeout: %lums\n", remainingTimeMs);
         drawGalonLiftedScreen();
-        delay(2000);
+        <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
+        <span style="background-color: #d4edda;">delay(2000);</span>
+        <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
         currentState   = STATE_CONFIRM_FILL;
         lastDrawnState = (AppState)(-1);
         break;
       }
+
       if (lastDrawnState != STATE_PROCESSING) {
         drawProcessingScreen(filledGallons + 1, totalGallons);
         lastDrawnState = STATE_PROCESSING;
         lastPulseCheckTime = millis();
         lastPulseCount = flowPulseCount;
+
+        // PROCESSING request sudah dipindah ke STATE_CONFIRM_FILL sebelum relay nyala
       } else {
         unsigned long pulseCount = flowPulseCount;
         unsigned long pulses = pulseCount;
         int progress = (int)((pulses * 100UL) / TARGET_PULSES);
         if (progress > 100) progress = 100;
+
         drawProgressBar(10, 148, 300, 22, progress, CLR_BLUE, CLR_DARK_GRAY);
+
         float liters = (float)pulses / (float)PULSES_PER_LITER;
         char text[32];
         snprintf(text, sizeof(text), "Terkirim: %.2f L", liters);
@@ -478,19 +513,42 @@ void resetFlowCounter();</code></pre>
         tft.setCursor(tx, 178);
         tft.print(text);
       }
+
       if (flowPulseCount >= TARGET_PULSES) {
         digitalWrite(PIN_RELAY, LOW);
+        <span style="background-color: #d4edda;">delay(500); // beri jeda agar back-EMF pompa reda sebelum lanjut</span>
+        <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
         filledGallons++;
-        Serial.printf("[DONE] Target 1 liter tercapai. Pulses=%lu\n", flowPulseCount);
+        <span style="background-color: #d4edda;">unsigned long elapsedMs = millis() - fillingStart;</span>
+        <span style="background-color: #d4edda;">float liters = (float)flowPulseCount / (float)PULSES_PER_LITER;</span>
+        <span style="background-color: #d4edda;">float flowRate = (float)flowPulseCount / (float)PULSES_PER_LITER / (elapsedMs / 60000.0);</span>
+        <span style="background-color: #d4edda;">Serial.println("=== KALIBRASI: Target Tercapai ===");</span>
+        <span style="background-color: #d4edda;">Serial.printf("Total Pulsa : %lu\n", flowPulseCount);</span>
+        <span style="background-color: #d4edda;">Serial.printf("Volume      : %.3f L\n", liters);</span>
+        <span style="background-color: #d4edda;">Serial.printf("Elapsed     : %lums (%.1f dtk)\n", elapsedMs, elapsedMs / 1000.0);</span>
+        <span style="background-color: #d4edda;">Serial.printf("Flow Rate   : %.2f L/min\n", flowRate);</span>
+        <span style="background-color: #d4edda;">Serial.printf("Pulsa/Liter : %.0f\n", (float)flowPulseCount / liters);</span>
+        <span style="background-color: #d4edda;">Serial.printf("Pulsa/Liter (ekstrapolasi ke 1L): %.1f\n", PULSES_PER_LITER * (1.0 / TARGET_LITERS));</span>
+        <span style="background-color: #d4edda;">Serial.println("================================");</span>
         currentState   = STATE_CHECK_NEXT;
         lastDrawnState = (AppState)(-1);
       }
+
       if (elapsed >= MAX_FILL_TIMEOUT_MS) {
         digitalWrite(PIN_RELAY, LOW);
-        Serial.println("[WARN] Timeout tercapai sebelum 1 liter");
+        <span style="background-color: #d4edda;">delay(500); // beri jeda agar back-EMF pompa reda</span>
+        <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
+        <span style="background-color: #d4edda;">float liters = (float)flowPulseCount / (float)PULSES_PER_LITER;</span>
+        <span style="background-color: #d4edda;">Serial.println("=== KALIBRASI: Timeout! ===");</span>
+        <span style="background-color: #d4edda;">Serial.printf("Total Pulsa : %lu\n", flowPulseCount);</span>
+        <span style="background-color: #d4edda;">Serial.printf("Volume      : %.3f L (belum tercapai)\n", liters);</span>
+        <span style="background-color: #d4edda;">Serial.printf("Elapsed     : %lums\n", elapsed);</span>
+        <span style="background-color: #d4edda;">Serial.printf("Target      : %lu pulsa (%.3f L)\n", TARGET_PULSES, TARGET_LITERS);</span>
+        <span style="background-color: #d4edda;">Serial.println("===========================");</span>
         currentState   = STATE_ERROR;
         lastDrawnState = (AppState)(-1);
       }
+
       delay(200);
       break;
     }</code></pre>
@@ -498,10 +556,10 @@ void resetFlowCounter();</code></pre>
 <td>
 <strong>Logika Proses Pengisian Air Bahaya (loop bagian 5 - STATE_PROCESSING):</strong>
 <ul>
-  <li><strong>Pengaman Galon Terangkat:</strong> Jika di tengah pengisian galon diangkat (IR membaca HIGH), pompa langsung dimatikan (LOW), sisa waktu timeout disimpan, flag <code>isPaused</code> diset True, memicu tampilan peringatan "Galon Terangkat!" selama 2 detik, lalu mengembalikan status ke <code>STATE_CONFIRM_FILL</code>.</li>
+  <li><strong>Pengaman Galon Terangkat:</strong> Jika di tengah pengisian galon diangkat (IR membaca HIGH), pompa langsung dimatikan (LOW), <span style="background-color: #d4edda;">ditambahkan <code>delay(500)</code> dan WDT reset untuk menstabilkan arus/back-EMF sisa pompa</span>, lalu sisa waktu timeout disimpan, flag <code>isPaused</code> diset True, memicu tampilan peringatan "Galon Terangkat!" selama 2 detik, lalu mengembalikan status ke <code>STATE_CONFIRM_FILL</code>.</li>
   <li><strong>Pembaruan UI Real-time:</strong> Menggambar persentase kemajuan volume air lewat bar progress secara visual, disertai keterangan liter air terkirim hasil konversi jumlah pulsa flow dibagi 450.</li>
-  <li><strong>Selesai Target:</strong> Bila pulsa flow melampaui target (450 pulsa / 1 liter), pompa dimatikan (LOW), variabel galon sukses terisi (<code>filledGallons</code>) bertambah satu, lalu bergeser ke status <code>STATE_CHECK_NEXT</code>.</li>
-  <li><strong>Pengaman Durasi Batas (Safety Timeout):</strong> Jika waktu berlalu melebihi batas 30 detik (<code>MAX_FILL_TIMEOUT_MS</code>) namun volume belum terpenuhi (karena air habis / sensor macet), pompa dimatikan paksa (LOW) dan sistem masuk ke <code>STATE_ERROR</code>.</li>
+  <li><strong>Selesai Target:</strong> Bila pulsa flow melampaui target, pompa dimatikan (LOW), <span style="background-color: #d4edda;">ditambah <code>delay(500)</code> dan feed WDT agar terhindar dari brownout/crash, kemudian sistem mencetak log rekapitulasi data empiris kalibrasi (pulsa, volume, waktu, flow rate) ke Serial Monitor</span>, variabel galon sukses terisi (<code>filledGallons</code>) bertambah satu, lalu bergeser ke status <code>STATE_CHECK_NEXT</code>.</li>
+  <li><strong>Pengaman Durasi Batas (Safety Timeout):</strong> Jika waktu berlalu melebihi batas 30 detik (<code>MAX_FILL_TIMEOUT_MS</code>) namun volume belum terpenuhi (karena air habis / sensor macet), pompa dimatikan paksa (LOW), <span style="background-color: #d4edda;">diberi jeda amanan 500ms dan reset WDT, mencetak data kalibrasi timeout</span>, lalu sistem masuk ke <code>STATE_ERROR</code>.</li>
 </ul>
 </td>
 </tr>
@@ -517,12 +575,15 @@ void resetFlowCounter();</code></pre>
       if (filledGallons < totalGallons) {
         if (digitalRead(PIN_IR_SENSOR) == HIGH) {
           Serial.println("[IR] Galon penuh diangkat -> Menyiapkan galon berikutnya");
+          <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
           delay(1000);
+          <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
           currentState   = STATE_PREPARE_FILL;
           lastDrawnState = (AppState)(-1);
         }
       } else {
         Serial.println("[API] Semua galon selesai, kirim DONE...");
+        <span style="background-color: #d4edda;">esp_task_wdt_reset(); // Reset WDT sebelum HTTP request</span>
         if (updateDeviceStatus("DONE")) {
           Serial.println("[API] DONE terkirim");
         } else {
@@ -538,8 +599,8 @@ void resetFlowCounter();</code></pre>
 <strong>Logika Pengurutan Multi-Galon (loop bagian 6 - STATE_CHECK_NEXT):</strong>
 <ul>
   <li>Menampilkan layar visual galon penuh "X/Y Selesai".</li>
-  <li>Jika jumlah galon terisi masih kurang dari total kuantitas transaksi: Program memantau sensor IR. Jika galon yang sudah terisi penuh diangkat (IR membaca HIGH), program memberi delay 1 detik lalu beralih kembali ke status persiapan <code>STATE_PREPARE_FILL</code> untuk pengisian galon kosong berikutnya.</li>
-  <li>Jika semua pesanan galon telah selesai diisi: ESP32 mengirim request update status transaksi menjadi "DONE" ke cloud API server, kemudian beralih ke status transaksi final <code>STATE_DONE</code>.</li>
+  <li>Jika jumlah galon terisi masih kurang dari total kuantitas transaksi: Program memantau sensor IR. Jika galon yang sudah terisi penuh diangkat (IR membaca HIGH), <span style="background-color: #d4edda;">program melakukan feed WDT sebelum dan sesudah <code>delay(1000)</code> untuk mencegah watchdog timeout</span>, lalu beralih kembali ke status persiapan <code>STATE_PREPARE_FILL</code> untuk pengisian galon kosong berikutnya.</li>
+  <li>Jika semua pesanan galon telah selesai diisi: <span style="background-color: #d4edda;">WDT di-reset terlebih dahulu sebelum</span> ESP32 mengirim request update status transaksi menjadi "DONE" ke cloud API server, kemudian beralih ke status transaksi final <code>STATE_DONE</code>.</li>
 </ul>
 </td>
 </tr>
@@ -552,11 +613,19 @@ void resetFlowCounter();</code></pre>
         lastDrawnState = STATE_DONE;
         Serial.println("[STATE] DONE");
       }
-      delay(5000);
+
+      <span style="background-color: #d4edda;">// delay non-blocking dengan WDT feed — 5 detik</span>
+      <span style="background-color: #d4edda;">for (int i = 0; i < 10; i++) {</span>
+        <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
+        <span style="background-color: #d4edda;">delay(500);</span>
+      <span style="background-color: #d4edda;">}</span>
+      <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
+
       totalGallons    = 0;
       filledGallons   = 0;
       remainingTimeMs = 0;
       isPaused        = false;
+
       currentState   = STATE_IDLE;
       lastDrawnState = (AppState)(-1);
       Serial.println("[STATE] Kembali ke IDLE");
@@ -566,7 +635,8 @@ void resetFlowCounter();</code></pre>
 <td>
 <strong>Logika Penutupan Transaksi (loop bagian 7 - STATE_DONE):</strong>
 <ul>
-  <li>Menggambar layar penutupan berwarna hijau dengan ucapan terima kasih selama 5 detik.</li>
+  <li>Menggambar layar penutupan berwarna hijau dengan ucapan terima kasih.</li>
+  <li style="background-color: #d4edda;">Menampilkan layar selama 5 detik menggunakan <strong>loop <code>delay(500)</code> × 10 iterasi</strong> dengan feed WDT di setiap siklus, menggantikan <code>delay(5000)</code> tunggal yang berisiko memicu watchdog timeout.</li>
   <li>Mereset seluruh variabel transaksi lokal meliputi <code>totalGallons</code>, <code>filledGallons</code>, <code>remainingTimeMs</code>, dan status flag <code>isPaused</code> kembali ke posisi awal.</li>
   <li>Mengalihkan status FSM kembali ke status siaga <code>STATE_IDLE</code> untuk menampilkan QR Code baru.</li>
 </ul>
@@ -671,6 +741,7 @@ void connectWiFi() {
   int attempts = 0;
   while (WiFi.status() != WL_CONNECTED && attempts < 40) {
     delay(500);
+    <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
     Serial.print(".");
     attempts++;
     tft.fillRect(80, 195, 160, 16, CLR_DARK_GRAY);
@@ -679,6 +750,7 @@ void connectWiFi() {
     }
   }
   Serial.println();
+  <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
   if (WiFi.status() == WL_CONNECTED) {
     wifiWasConnected = true;
     currentState   = STATE_IDLE;
@@ -689,10 +761,12 @@ void connectWiFi() {
     snprintf(ipStr, sizeof(ipStr), "IP: %s", WiFi.localIP().toString().c_str());
     drawCenteredText(ipStr, 130, 1, CLR_WHITE, CLR_DARK_GRAY);
     delay(1500);
+    <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
   } else {
     Serial.println("[WiFi] Gagal.");
     drawCenteredText("Gagal! Coba lagi...", 130, 1, CLR_RED, CLR_DARK_GRAY);
     delay(3000);
+    <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
   }
 }</code></pre>
 </td>
@@ -701,7 +775,7 @@ void connectWiFi() {
 <ul>
   <li>Melakukan inisialisasi ESP32 dalam mode Station (STA) agar dapat terhubung dengan Access Point (router) luar.</li>
   <li>Memulai proses koneksi menggunakan <code>WiFi.begin()</code>.</li>
-  <li>Melakukan looping tunggu (maksimal 40 kali percobaan atau 20 detik) sambil menggambar indikator loading titik-titik kuning pada layar TFT.</li>
+  <li>Melakukan looping tunggu (maksimal 40 kali percobaan atau 20 detik) sambil menggambar indikator loading titik-titik kuning pada layar TFT. <span style="background-color: #d4edda;">Setiap iterasi memanggil <code>esp_task_wdt_reset()</code> agar blocking loop 20 detik tidak memicu WDT timeout.</span></li>
   <li>Jika terhubung, menampilkan pesan sukses "WiFi Terhubung!" beserta alamat IP lokal yang didapat, lalu mengalihkan status FSM ke <code>STATE_IDLE</code>.</li>
   <li>Jika gagal, memunculkan notifikasi merah di layar selama 3 detik sebelum nanti dipanggil kembali untuk melakukan percobaan ulang.</li>
 </ul>
@@ -714,6 +788,7 @@ void connectWiFi() {
 // HTTP GET
 // =============================================================================
 String getDeviceStatus() {
+  <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
@@ -724,6 +799,7 @@ String getDeviceStatus() {
   http.addHeader("x-device-code", DEVICE_CODE);
   http.addHeader("x-device-token", DEVICE_TOKEN);
   int code = http.GET();
+  <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
   String result = "";
   if (code == HTTP_CODE_OK) {
     String payload = http.getString();
@@ -749,6 +825,7 @@ String getDeviceStatus() {
 <td>
 <strong>Request Mengambil Status Perangkat (getDeviceStatus):</strong>
 <ul>
+  <li style="background-color: #d4edda;"><code>esp_task_wdt_reset()</code> dipanggil sebelum dan sesudah HTTP request untuk mencegah watchdog timeout karena latensi koneksi jaringan.</li>
   <li>Menggunakan <code>WiFiClientSecure</code> dengan <code>setInsecure()</code> untuk membypass pengecekan rantai sertifikat SSL (HTTPS tanpa SSL certificate verification).</li>
   <li>Menyusun URL tujuan ke endpoint detail status device di cloud backend.</li>
   <li>Menambahkan header otentikasi wajib <code>x-device-code</code> dan <code>x-device-token</code>.</li>
@@ -765,6 +842,7 @@ String getDeviceStatus() {
 // HTTP PATCH
 // =============================================================================
 bool updateDeviceStatus(const char* status) {
+  <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
   WiFiClientSecure client;
   client.setInsecure();
   HTTPClient http;
@@ -782,6 +860,7 @@ bool updateDeviceStatus(const char* status) {
   serializeJson(doc, body);
   Serial.print("[HTTP PATCH] "); Serial.println(body);
   int code = http.PATCH(body);
+  <span style="background-color: #d4edda;">esp_task_wdt_reset();</span>
   bool ok = (code == HTTP_CODE_OK || code == HTTP_CODE_CREATED);
   if (!ok) {
     Serial.print("[HTTP PATCH] Error: ");
@@ -794,6 +873,7 @@ bool updateDeviceStatus(const char* status) {
 <td>
 <strong>Request Update Status Perangkat (updateDeviceStatus):</strong>
 <ul>
+  <li style="background-color: #d4edda;"><code>esp_task_wdt_reset()</code> dipanggil sebelum dan sesudah HTTP PATCH request, melindungi dari timeout WDT saat latensi jaringan tinggi.</li>
   <li>Digunakan untuk mengabarkan kemajuan proses dispenser ke cloud server (misalnya saat beralih ke "PROCESSING" atau "DONE").</li>
   <li>Menyiapkan data body request JSON dengan struktur objek JSON berisi payload kode device dan status baru yang akan di-update.</li>
   <li>Mengirim data tersebut via metode request HTTP PATCH dengan tipe data Content-Type JSON.</li>
