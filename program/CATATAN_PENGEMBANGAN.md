@@ -173,3 +173,10 @@ Ditemukan 5 titik di mana watchdog timer (WDT) bisa memicu restart acak karena b
 - Namun, selisih 0.05 L dikarenakan air di dalam selang sepanjang 13 cm memiliki sisa volume ($6.4\text{ mL}$) ditambah efek gravitasi dan inersia yang tak dapat dihindari.
 - Keputusan: **Sistem dikembalikan dan menggunakan angka teoritis 450 pulsa/liter** untuk konsistensi. Toleransi error residual selang adalah sekitar $1.29\%$, masih sangat wajar untuk skala dispenser industri.
 - File analisis lengkap ada di `ANALISIS_VOLUME_SELANG.md`.
+
+---
+
+## 10. Penyelesaian Sesi 26 Juli 2026
+- Seluruh perbaikan software (Watchdog Timer dan urutan HTTP/Relay) dan kalibrasi flow sensor telah selesai.
+- Dokumentasi analisis volume selang dan catatan pengembangan telah diperbarui.
+- Perubahan di-commit dan di-push ke GitHub pada branch `feat/fix-wdt-kalibrasi-flow`.
