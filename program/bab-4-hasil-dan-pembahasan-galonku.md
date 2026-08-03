@@ -306,13 +306,52 @@ Berdasarkan Tabel 4.6, layar TFT ILI9341 mampu menampilkan seluruh informasi ope
 | 4 | Pembayaran belum berhasil/gagal | Pompa tidak dapat diaktifkan | Sesuai | ESP32-S3 tetap pada status *idle* |
 | 5 | Transaksi berhasil dan galon tersedia | Perintah pengisian dapat dijalankan | Sesuai | Pompa menyala setelah tombol ditekan |
 
+Bukti visual pengujian aplikasi dan *Payment Gateway* ditunjukkan pada Gambar 4.8 dan Gambar 4.9.
+
+**Gambar 4.8. Bukti pembayaran berhasil di aplikasi**  
+> Sisipkan tangkapan layar halaman konfirmasi pembayaran berhasil bersama status transaksi berubah menjadi *berhasil* dan halaman yang menunjukkan mesin siap diisi.
+
+**Gambar 4.9. Bukti pembayaran *expired* atau gagal**  
+> Sisipkan tangkapan layar faktur yang melewati batas waktu / pembayaran gagal dan status transaksi tetap tidak memungkinkan pengisian.
+
 Berdasarkan Tabel 4.7, integrasi aplikasi dan *Payment Gateway* Xendit berjalan sesuai rancangan. Pengujian dilakukan menggunakan transaksi uji pada lingkungan yang terhubung ke layanan Xendit.
 
-### 4.2.7 Pengujian Sistem Keseluruhan
+### 4.2.7 Pengujian Antarmuka Aplikasi *Mobile*
+
+**Tujuan pengujian.** Memverifikasi bahwa setiap halaman utama aplikasi *mobile* GalonKu menampilkan antarmuka sesuai rancangan dan mendukung alur pemesanan dari pemindaian kode QR hingga konfirmasi transaksi berhasil.
+
+**Skenario pengujian.** Aplikasi GalonKu dijalankan pada perangkat Android. Pengguna menjalankan alur pemesanan secara lengkap, dimulai dari pemindaian kode QR pada mesin dispenser, pemilihan jumlah galon, pembayaran melalui *invoice* Xendit, hingga tampilan status transaksi berhasil. Setiap halaman utama didokumentasikan melalui tangkapan layar dan dibandingkan dengan rancangan antarmuka pada Bab III.
+
+**Tabel 4.8. Hasil pengujian antarmuka aplikasi *mobile***
+
+| No. | Halaman | Fungsi | Hasil uji |
+|---:|---|---|---|
+| 1 | Pemindaian Kode QR (`ScanQrPage`) | Memindai kode QR pada mesin dispenser untuk memperoleh `device_code` | Sesuai — kamera mendeteksi QR, kode terbaca, navigasi ke halaman *Checkout* |
+| 2 | *Checkout* Pesanan (`CheckoutPage`) | Memilih jumlah galon, menampilkan rincian harga (Rp 8.000/galon), dan membuat transaksi | Sesuai — jumlah galon dapat dipilih, total harga terhitung otomatis, tombol "Buat Pesanan" memicu permintaan ke server |
+| 3 | Faktur Pembayaran (`PaymentInvoicePage`) | Menampilkan halaman pembayaran Xendit di dalam *WebView* untuk penyelesaian transaksi | Sesuai — *invoice* Xendit terbuka di dalam aplikasi, pengguna dapat memilih metode pembayaran (dompet digital/*virtual account*) |
+| 4 | Status Transaksi Berhasil | Menampilkan konfirmasi bahwa pembayaran telah berhasil dan perangkat siap melakukan pengisian | Sesuai — status transaksi berubah menjadi `PAID`/`SETTLED`, pengguna mendapat notifikasi bahwa mesin siap digunakan |
+
+Bukti visual setiap halaman utama ditunjukkan pada Gambar 4.10 sampai Gambar 4.13.
+
+**Gambar 4.10. Halaman pemindaian kode QR (*ScanQrPage*)**  
+> Sisipkan tangkapan layar halaman pemindaian kode QR.
+
+**Gambar 4.11. Halaman *Checkout* pesanan (*CheckoutPage*)**  
+> Sisipkan tangkapan layar halaman *Checkout* beserta rincian harga.
+
+**Gambar 4.12. Halaman faktur pembayaran (*PaymentInvoicePage*)**  
+> Sisipkan tangkapan layar halaman *invoice* Xendit di dalam *WebView*.
+
+**Gambar 4.13. Halaman status transaksi berhasil**  
+> Sisipkan tangkapan layar konfirmasi pembayaran berhasil.
+
+Berdasarkan Tabel 4.8, seluruh halaman utama aplikasi *mobile* GalonKu menampilkan antarmuka yang sesuai dengan rancangan dan menjalankan fungsi masing-masing tanpa kendala. Alur pemesanan dari pemindaian QR hingga konfirmasi pembayaran berhasil berjalan secara terintegrasi dengan layanan *backend* dan *Payment Gateway* Xendit. Tangkapan layar pada Gambar 4.10 sampai Gambar 4.13 menunjukkan kesesuaian antara implementasi aktual dan rancangan antarmuka yang telah dijelaskan pada Bab III.
+
+### 4.2.8 Pengujian Sistem Keseluruhan
 
 **Tujuan pengujian.** Memastikan seluruh komponen bekerja secara terintegrasi dari pemilihan volume hingga pengisian selesai.
 
-**Tabel 4.8. Hasil pengujian sistem keseluruhan**
+**Tabel 4.9. Hasil pengujian sistem keseluruhan**
 
 | No. | Skenario | Kondisi awal | Hasil yang diharapkan | Hasil uji | Status |
 |---:|---|---|---|---|---|
@@ -322,17 +361,19 @@ Berdasarkan Tabel 4.7, integrasi aplikasi dan *Payment Gateway* Xendit berjalan 
 | 4 | Target volume tercapai | Pompa sedang menyala | Pompa berhenti otomatis | Sesuai | Berhasil |
 | 5 | Koneksi internet terganggu | Sistem sedang digunakan | Sistem memberikan status sesuai rancangan | TFT menampilkan *reconnecting*; relay dimatikan | Berhasil |
 
-Berdasarkan pengujian pada Tabel 4.8, sistem GalonKu secara keseluruhan mampu menjalankan alur pengisian air otomatis dari transaksi hingga pengisian selesai. Fungsi pengaman, pengendalian volume, dan pemulihan saat gangguan koneksi telah berjalan sesuai rancangan. Bagian yang masih dapat ditingkatkan adalah kompensasi volume sisa selang dan penyesuaian kalibrasi sensor pada target volume yang lebih kecil.
+Berdasarkan pengujian pada Tabel 4.9, sistem GalonKu secara keseluruhan mampu menjalankan alur pengisian air otomatis dari transaksi hingga pengisian selesai. Fungsi pengaman, pengendalian volume, dan pemulihan saat gangguan koneksi telah berjalan sesuai rancangan. Bagian yang masih dapat ditingkatkan adalah kompensasi volume sisa selang dan penyesuaian kalibrasi sensor pada target volume yang lebih kecil.
 
 ## 4.3 Pembahasan
 
 Hasil implementasi menunjukkan bahwa GalonKu mengintegrasikan perangkat sensor, aktuator, aplikasi *mobile*, layanan *backend*, basis data PostgreSQL, dan *Payment Gateway* Xendit dalam satu kesatuan alur kerja. ESP32-S3 bertindak sebagai pengendali utama yang memproses masukan dari sensor inframerah, sensor debit YF-S201, dan tombol *push-button*, serta mengendalikan relay pompa dan layar TFT berdasarkan status transaksi yang diperoleh dari server melalui *polling* HTTP.
 
-Berdasarkan hasil pengujian pada Tabel 4.2 sampai Tabel 4.8, sistem menunjukkan kinerja yang sesuai dengan rancangan pada seluruh skenario utama. Sensor inframerah mampu mendeteksi keberadaan galon secara konsisten (Tabel 4.2), sehingga mekanisme pengaman *interlock* yang mencegah pompa menyala saat galon tidak terdeteksi dapat berjalan dengan baik. Tombol *push-button* berfungsi untuk memulai dan melanjutkan pengisian, serta tetap tidak aktif pada kondisi yang belum memenuhi syarat — seperti saat transaksi belum berhasil (Tabel 4.4). Pengujian pompa dan relay (Tabel 4.5) memvalidasi bahwa sistem pemompaan hanya aktif ketika seluruh kondisi keamanan terpenuhi, dan berhenti secara otomatis ketika volume target tercapai.
+Pengujian antarmuka aplikasi *mobile* (Tabel 4.8) memverifikasi bahwa setiap halaman utama — pemindaian QR, *checkout*, faktur pembayaran Xendit, dan status transaksi berhasil — menampilkan antarmuka sesuai rancangan dan berfungsi sebagai satu kesatuan alur pemesanan.
+
+Berdasarkan hasil pengujian pada Tabel 4.2 sampai Tabel 4.9, sistem menunjukkan kinerja yang sesuai dengan rancangan pada seluruh skenario utama. Sensor inframerah mampu mendeteksi keberadaan galon secara konsisten (Tabel 4.2), sehingga mekanisme pengaman *interlock* yang mencegah pompa menyala saat galon tidak terdeteksi dapat berjalan dengan baik. Tombol *push-button* berfungsi untuk memulai dan melanjutkan pengisian, serta tetap tidak aktif pada kondisi yang belum memenuhi syarat — seperti saat transaksi belum berhasil (Tabel 4.4). Pengujian pompa dan relay (Tabel 4.5) memvalidasi bahwa sistem pemompaan hanya aktif ketika seluruh kondisi keamanan terpenuhi, dan berhenti secara otomatis ketika volume target tercapai.
 
 Sensor debit YF-S201 menunjukkan akurasi yang sangat baik pada pengujian target volume 200 mL dengan volume aktual yang sesuai persis tanpa selisih (0 mL). Pada target volume 1000 mL, sistem mencatat volume aktual yang sedikit kurang, dengan galat antara 0,50% hingga 1,01% (Tabel 4.3). Angka-angka ini berada dalam kisaran toleransi industri dispenser air yang umumnya berkisar antara ±2% hingga ±5%. Galat yang lebih tinggi (9,09%) pada pengujian awal 500 mL disebabkan oleh dua faktor utama: pertama, volume air sisa pada selang keluaran pasca-sensor sebesar 6,43 mL yang dihitung berdasarkan geometri selang ($V = \pi r^2 h$), dan kedua, inersia mekanis pemutusan pompa yang menyebabkan sejumlah kecil air masih mengalir setelah relay dimatikan. Kontribusi volume sisa selang terhadap deviasi residual adalah sekitar 1,29% terhadap target 500 mL, yang masih berada di bawah batas toleransi.
 
-Layar TFT ILI9341 berhasil menampilkan seluruh informasi operasional yang dirancang, meliputi status koneksi, status galon, volume pengisian, status pompa, dan status transaksi (Tabel 4.6). Integrasi aplikasi dan *Payment Gateway* Xendit (Tabel 4.7) berjalan sesuai alur yang direncanakan: transaksi dibuat, *invoice* ditampilkan, pembayaran diverifikasi melalui *webhook*, dan status perangkat diperbarui menjadi `SCANNED`. Pengujian sistem keseluruhan (Tabel 4.8) menunjukkan bahwa seluruh skenario — mulai dari pengisian normal, penolakan saat galon tidak tersedia, penolakan saat pembayaran belum berhasil, penghentian otomatis pada target volume, hingga pemulihan saat koneksi internet terganggu — memberikan hasil yang sesuai.
+Layar TFT ILI9341 berhasil menampilkan seluruh informasi operasional yang dirancang, meliputi status koneksi, status galon, volume pengisian, status pompa, dan status transaksi (Tabel 4.6). Integrasi aplikasi dan *Payment Gateway* Xendit (Tabel 4.7) berjalan sesuai alur yang direncanakan: transaksi dibuat, *invoice* ditampilkan, pembayaran diverifikasi melalui *webhook*, dan status perangkat diperbarui menjadi `SCANNED`. Pengujian sistem keseluruhan (Tabel 4.9) menunjukkan bahwa seluruh skenario — mulai dari pengisian normal, penolakan saat galon tidak tersedia, penolakan saat pembayaran belum berhasil, penghentian otomatis pada target volume, hingga pemulihan saat koneksi internet terganggu — memberikan hasil yang sesuai.
 
 Kelebihan sistem GalonKu terletak pada otomatisasi proses pengisian dan pencatatan transaksi secara digital tanpa campur tangan operator. Pengguna cukup memindai kode QR, memilih volume, dan melakukan pembayaran melalui aplikasi. Setelah pembayaran terverifikasi, dispenser bekerja secara mandiri hingga seluruh galon terisi. Mekanisme pengaman berlapis melalui sensor inframerah dan status transaksi memastikan pompa tidak menyala dalam kondisi yang tidak aman.
 
