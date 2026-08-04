@@ -247,6 +247,19 @@ $$\text{Error residual} = \left(\frac{6{,}43}{500}\right) \times 100\% \approx 1
 
 Nilai tersebut masih berada di bawah ambang toleransi umum dispenser air (sekitar $\pm 2\%$ hingga $5\%$). Dengan demikian, deviasi yang diamati pada pengujian tidak semata-mata berasal dari kesalahan pembacaan sensor, melainkan juga dari karakteristik mekanis saluran air dan inersia pemutusan pompa. Kompensasi perangkat lunak untuk volume sisa selang bersifat opsional dan dapat menjadi pengembangan lanjutan.
 
+#### C. Dokumentasi Pengujian
+
+Sebagai bukti visual pendukung hasil pengukuran pada Tabel 4.3, volume aktual yang tertampil pada gelas ukur didokumentasikan untuk setiap target volume pengujian. Dokumentasi tersebut ditunjukkan pada Gambar 4.8 sampai Gambar 4.10.
+
+**Gambar 4.8. Hasil pengukuran volume aktual pada target 200 mL**  
+> Sisipkan foto gelas ukur menunjukkan volume aktual 200 mL saat pengujian.
+
+**Gambar 4.9. Hasil pengukuran volume aktual pada target 500 mL**  
+> Sisipkan foto gelas ukur menunjukkan volume aktual 550 mL saat pengujian uji awal pra-kalibrasi.
+
+**Gambar 4.10. Hasil pengukuran volume aktual pada target 1000 mL**  
+> Sisipkan foto gelas ukur menunjukkan volume aktual sekitar 990–995 mL saat pengujian.
+
 ### 4.2.3 Pengujian Tombol *Push-Button*
 
 **Tujuan pengujian.** Memastikan tombol *push-button* dapat memberikan masukan kepada ESP32-S3 sesuai fungsi yang dirancang, yaitu mengonfirmasi dimulainya pengisian dan melanjutkan pengisian setelah galon dikembalikan.
@@ -306,12 +319,12 @@ Berdasarkan Tabel 4.6, layar TFT ILI9341 mampu menampilkan seluruh informasi ope
 | 4 | Pembayaran belum berhasil/gagal | Pompa tidak dapat diaktifkan | Sesuai | ESP32-S3 tetap pada status *idle* |
 | 5 | Transaksi berhasil dan galon tersedia | Perintah pengisian dapat dijalankan | Sesuai | Pompa menyala setelah tombol ditekan |
 
-Bukti visual pengujian aplikasi dan *Payment Gateway* ditunjukkan pada Gambar 4.8 dan Gambar 4.9.
+Bukti visual pengujian aplikasi dan *Payment Gateway* ditunjukkan pada Gambar 4.11 dan Gambar 4.12.
 
-**Gambar 4.8. Bukti pembayaran berhasil di aplikasi**  
+**Gambar 4.11. Bukti pembayaran berhasil di aplikasi**  
 > Sisipkan tangkapan layar halaman konfirmasi pembayaran berhasil bersama status transaksi berubah menjadi *berhasil* dan halaman yang menunjukkan mesin siap diisi.
 
-**Gambar 4.9. Bukti pembayaran *expired* atau gagal**  
+**Gambar 4.12. Bukti pembayaran *expired* atau gagal**  
 > Sisipkan tangkapan layar faktur yang melewati batas waktu / pembayaran gagal dan status transaksi tetap tidak memungkinkan pengisian.
 
 Berdasarkan Tabel 4.7, integrasi aplikasi dan *Payment Gateway* Xendit berjalan sesuai rancangan. Pengujian dilakukan menggunakan transaksi uji pada lingkungan yang terhubung ke layanan Xendit.
@@ -331,21 +344,21 @@ Berdasarkan Tabel 4.7, integrasi aplikasi dan *Payment Gateway* Xendit berjalan 
 | 3 | Faktur Pembayaran (`PaymentInvoicePage`) | Menampilkan halaman pembayaran Xendit di dalam *WebView* untuk penyelesaian transaksi | Sesuai — *invoice* Xendit terbuka di dalam aplikasi, pengguna dapat memilih metode pembayaran (dompet digital/*virtual account*) |
 | 4 | Status Transaksi Berhasil | Menampilkan konfirmasi bahwa pembayaran telah berhasil dan perangkat siap melakukan pengisian | Sesuai — status transaksi berubah menjadi `PAID`/`SETTLED`, pengguna mendapat notifikasi bahwa mesin siap digunakan |
 
-Bukti visual setiap halaman utama ditunjukkan pada Gambar 4.10 sampai Gambar 4.13.
+Bukti visual setiap halaman utama ditunjukkan pada Gambar 4.13 sampai Gambar 4.16.
 
-**Gambar 4.10. Halaman pemindaian kode QR (*ScanQrPage*)**  
+**Gambar 4.13. Halaman pemindaian kode QR (*ScanQrPage*)**  
 > Sisipkan tangkapan layar halaman pemindaian kode QR.
 
-**Gambar 4.11. Halaman *Checkout* pesanan (*CheckoutPage*)**  
+**Gambar 4.14. Halaman *Checkout* pesanan (*CheckoutPage*)**  
 > Sisipkan tangkapan layar halaman *Checkout* beserta rincian harga.
 
-**Gambar 4.12. Halaman faktur pembayaran (*PaymentInvoicePage*)**  
+**Gambar 4.15. Halaman faktur pembayaran (*PaymentInvoicePage*)**  
 > Sisipkan tangkapan layar halaman *invoice* Xendit di dalam *WebView*.
 
-**Gambar 4.13. Halaman status transaksi berhasil**  
+**Gambar 4.16. Halaman status transaksi berhasil**  
 > Sisipkan tangkapan layar konfirmasi pembayaran berhasil.
 
-Berdasarkan Tabel 4.8, seluruh halaman utama aplikasi *mobile* GalonKu menampilkan antarmuka yang sesuai dengan rancangan dan menjalankan fungsi masing-masing tanpa kendala. Alur pemesanan dari pemindaian QR hingga konfirmasi pembayaran berhasil berjalan secara terintegrasi dengan layanan *backend* dan *Payment Gateway* Xendit. Tangkapan layar pada Gambar 4.10 sampai Gambar 4.13 menunjukkan kesesuaian antara implementasi aktual dan rancangan antarmuka yang telah dijelaskan pada Bab III.
+Berdasarkan Tabel 4.8, seluruh halaman utama aplikasi *mobile* GalonKu menampilkan antarmuka yang sesuai dengan rancangan dan menjalankan fungsi masing-masing tanpa kendala. Alur pemesanan dari pemindaian QR hingga konfirmasi pembayaran berhasil berjalan secara terintegrasi dengan layanan *backend* dan *Payment Gateway* Xendit. Tangkapan layar pada Gambar 4.13 sampai Gambar 4.16 menunjukkan kesesuaian antara implementasi aktual dan rancangan antarmuka yang telah dijelaskan pada Bab III.
 
 ### 4.2.8 Pengujian Sistem Keseluruhan
 
